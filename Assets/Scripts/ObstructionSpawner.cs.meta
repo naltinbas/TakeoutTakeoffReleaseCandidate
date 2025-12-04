@@ -1,0 +1,13 @@
+fileFormatVersion: 2
+guid: d0b66c5feb1944630ab75213b1d87e47
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - birdsPrefab: {fileID: 1076758201337559544, guid: 435b0bcc144f243fd88c29d49d6c4e2e, type: 3}
+  - cloudsPrefab: {fileID: 6171135359596463316, guid: 06097e6c1ebcf494b989784aca3b100e, type: 3}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
