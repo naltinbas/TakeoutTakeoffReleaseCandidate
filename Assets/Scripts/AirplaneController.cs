@@ -11,17 +11,16 @@ public class AirplaneController : MonoBehaviour
     [Header("Propeller Reference")]
     public PropellerRotator propellerRotator;
 
-
     [Header("Fuel Reference")]
     public FuelSystem fuelSystem;
 
     [Header("Flight Settings")]
     public float baseAirplaneSpeed = 5f;
     public float descentSpeedWhenEmpty = 6f;
-    public float glideSpeedMin = 1.5f;        // minimum forward glide speed
-    public float glideDecayRate = 0.3f;       // how quickly the speed decays after fuel is gone
+    public float glideSpeedMin = 1.5f;
+    public float glideDecayRate = 0.3f;
 
-    private float currentSpeed;
+    private float _currentSpeed;
     private bool _fuelEmpty = false;
 
     public bool IsGoingBack => (_yaw < 0 ? -_yaw : _yaw) % 360 > 90f
@@ -59,9 +58,8 @@ public class AirplaneController : MonoBehaviour
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
 
-        currentSpeed = CalculateDifficultyBasedSpeed();
+        _currentSpeed = CalculateDifficultyBasedSpeed();
 
-        // Auto-find FuelSystem if not assigned in Inspector
         if (fuelSystem == null)
             fuelSystem = FindObjectOfType<FuelSystem>();
     }
@@ -69,15 +67,6 @@ public class AirplaneController : MonoBehaviour
     private float CalculateDifficultyBasedSpeed()
     {
         return baseAirplaneSpeed * (int)LevelManager.currentLevel;
-    }
-
-    private void HandleTelemetryForTutorialCompletion()
-    {
-        if(!MetricsManager.IsTelemetryEnabled) return;
-        var metricsManager = FindObjectOfType<MetricsManager>();
-        if (!metricsManager) return;
-        var dateTime = DateTime.Now;
-        metricsManager.Record(dateTime, MetricsManager.DateTimeSampleType.TutorialCompletion);
     }
 
     void Update()
@@ -92,7 +81,7 @@ public class AirplaneController : MonoBehaviour
             _initialPositionGo.transform.position = new Vector3(17f,
                                                                 _initialPositionGo.transform.position.y,
                                                                 -20f);
-            HandleTelemetryForTutorialCompletion();
+            GameEvents.FireTutorialComplete();
         }
 
         if (RespawnIfNecessary()) return;
@@ -108,29 +97,25 @@ public class AirplaneController : MonoBehaviour
                                                    Vector3.right * _pitch +
                                                    Vector3.forward * _roll);
 
-        // Smooth speed decay if fuel is empty
         if (_fuelEmpty)
         {
-            currentSpeed = Mathf.Lerp(currentSpeed, glideSpeedMin, Time.deltaTime * glideDecayRate);
+            _currentSpeed = Mathf.Lerp(_currentSpeed, glideSpeedMin, Time.deltaTime * glideDecayRate);
         }
         else
         {
-            currentSpeed = CalculateDifficultyBasedSpeed();
+            _currentSpeed = CalculateDifficultyBasedSpeed();
         }
 
-        // Movement behavior
         if (!_fuelEmpty)
         {
-            transform.position += transform.forward * currentSpeed * Time.deltaTime;
+            transform.position += transform.forward * _currentSpeed * Time.deltaTime;
         }
         else
         {
-            // Gradual glide + descent
             Vector3 glideDirection = (transform.forward + Vector3.down * 0.4f).normalized;
-            transform.position += glideDirection * currentSpeed * Time.deltaTime;
+            transform.position += glideDirection * _currentSpeed * Time.deltaTime;
             transform.position += Vector3.down * (descentSpeedWhenEmpty * 0.3f) * Time.deltaTime;
 
-            // Smooth nose dip
             Quaternion targetRotation = Quaternion.Euler(25f, transform.eulerAngles.y, transform.eulerAngles.z);
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * 0.5f);
         }
@@ -174,22 +159,15 @@ public class AirplaneController : MonoBehaviour
             planeBoost.ResetBoosts();
 
         _fuelEmpty = false;
-        currentSpeed = CalculateDifficultyBasedSpeed();
+        _currentSpeed = CalculateDifficultyBasedSpeed();
 
         if (propellerRotator != null)
             propellerRotator.ResumeRotation();
 
         AudioSourceManager.PlayPersistentAudio();
 
-        //SpawnManager sm = FindObjectOfType<SpawnManager>();
-        //if (sm != null)
-        //    sm.ResetPickups();
-
-        SpawnManager spawnManager = FindObjectOfType<SpawnManager>();
-
-        spawnManager.ResetPickups();
-
-
+        if (SpawnManager.Instance != null)
+            SpawnManager.Instance.ResetPickups();
     }
 
     public void OnFuelEmpty()
@@ -201,5 +179,7 @@ public class AirplaneController : MonoBehaviour
 
         if (_fuelEmpty) return;
         _fuelEmpty = true;
+
+        GameEvents.FireFuelEmpty();
     }
 }

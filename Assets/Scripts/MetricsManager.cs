@@ -2,7 +2,9 @@ using System;
 using UnityEngine;
 using USCG.Core.Telemetry;
 
-public class MetricsManager : MonoBehaviour
+// Singleton - subscribes to GameEvents (Observer pattern) so other
+// scripts dont need to find and call it directly.
+public class MetricsManager : Singleton<MetricsManager>
 {
     public static readonly bool IsTelemetryEnabled = false;
 
@@ -31,11 +33,67 @@ public class MetricsManager : MonoBehaviour
         GameStart,
         GameEnd
     }
-        
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
+
     void Start()
     {
         InitializeMetrics();
+    }
+
+    private void OnEnable()
+    {
+        GameEvents.OnExplosion += HandleExplosion;
+        GameEvents.OnMealCollected += HandleMealCollected;
+        GameEvents.OnMealDelivered += HandleMealDelivered;
+        GameEvents.OnTutorialComplete += HandleTutorialComplete;
+        GameEvents.OnObstructionHit += HandleObstructionHit;
+    }
+
+    private void OnDisable()
+    {
+        GameEvents.OnExplosion -= HandleExplosion;
+        GameEvents.OnMealCollected -= HandleMealCollected;
+        GameEvents.OnMealDelivered -= HandleMealDelivered;
+        GameEvents.OnTutorialComplete -= HandleTutorialComplete;
+        GameEvents.OnObstructionHit -= HandleObstructionHit;
+    }
+
+    private void HandleExplosion()
+    {
+        if (!IsTelemetryEnabled) return;
+        Record(AccumulationType.Explosion);
+        ClearTimeRecords(DateTimeSampleType.HamburgerDelivery);
+        ClearTimeRecords(DateTimeSampleType.HamburgerCollection);
+    }
+
+    private void HandleMealCollected()
+    {
+        if (!IsTelemetryEnabled) return;
+        Record(DateTime.Now, DateTimeSampleType.HamburgerCollection);
+    }
+
+    private void HandleMealDelivered()
+    {
+        if (!IsTelemetryEnabled) return;
+        Record(DateTime.Now, DateTimeSampleType.HamburgerDelivery);
+    }
+
+    private void HandleTutorialComplete()
+    {
+        if (!IsTelemetryEnabled) return;
+        Record(DateTime.Now, DateTimeSampleType.TutorialCompletion);
+    }
+
+    private void HandleObstructionHit(string objectName)
+    {
+        if (!IsTelemetryEnabled) return;
+        AccumulationType accumulationType = objectName switch
+        {
+            "Birds" => AccumulationType.BirdCollision,
+            "Cloud" => AccumulationType.CloudCollision,
+            _ => AccumulationType.None
+        };
+        if (accumulationType == AccumulationType.None) return;
+        Record(accumulationType);
     }
 
     private void InitializeMetrics()
@@ -106,7 +164,7 @@ public class MetricsManager : MonoBehaviour
         MetricId metricId = GetMetricId(dateTimeSampleType);
         TelemetryManager.instance.ClearTimeSamples(metricId);
     }
-    
+
     public void RecordDateTimeNowFor(DateTimeSampleType dateTimeSampleType)
     {
         Record(DateTime.Now, dateTimeSampleType);

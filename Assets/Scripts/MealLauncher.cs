@@ -4,9 +4,22 @@ using UnityEngine;
 
 public class MealLauncher : MonoBehaviour
 {
-    public static int MaxMeals = 4;
+    // Static proxies for backwards compatibility - delegate to MealTracker singleton
+    public static int MaxMeals => MealTracker.Instance != null ? MealTracker.Instance.MaxMeals : 4;
+    public static int numLaunchedMeals => MealTracker.Instance != null ? MealTracker.Instance.NumLaunchedMeals : 0;
+    public static bool isLaunching
+    {
+        get => MealTracker.Instance != null && MealTracker.Instance.IsLaunching;
+        set { if (MealTracker.Instance != null) MealTracker.Instance.IsLaunching = value; }
+    }
+    public static bool shouldResetForNextLevel
+    {
+        get => MealTracker.Instance != null && MealTracker.Instance.ShouldResetForNextLevel;
+        set { if (MealTracker.Instance != null) MealTracker.Instance.ShouldResetForNextLevel = value; }
+    }
+
     private AirplaneController _airplaneController;
-    private Transform _launchPoint;       // Where to spawn the ball
+    private Transform _launchPoint;
 
     private const float Gravity = -9.81f;
     private readonly Vector3 _initialVelocity = Vector3.up * Gravity;
@@ -15,34 +28,18 @@ public class MealLauncher : MonoBehaviour
     public float lifeTime = 20f;
     private float _coolDownTime = 1.5f;
 
-    public static bool isLaunching;
-    private static int _numMealCollected = 0;
-    public static int numLaunchedMeals = 0;
-    private static int _remainingMeals = MaxMeals;
-    public static bool shouldResetForNextLevel;
-    private static bool _hasSetNumMeals;
-
     private bool IsLaunched { get; set; }
     public bool IsCollected { get; private set; }
 
     private void Start()
     {
-        // Reset state only when loading a new level
-        if (shouldResetForNextLevel)
+        if (MealTracker.Instance == null)
         {
-            isLaunching = false;
-            _numMealCollected = 0;
-            numLaunchedMeals = 0;
-            _hasSetNumMeals = false;
-            shouldResetForNextLevel = false;
+            var go = new GameObject("MealTracker");
+            go.AddComponent<MealTracker>();
         }
 
-        // Only update MaxMeals if it hasn't been set for this new level
-        if (!_hasSetNumMeals)
-        {
-            _remainingMeals = MaxMeals = GameObject.FindGameObjectsWithTag("Coin").Length;
-            _hasSetNumMeals = true;
-        }
+        MealTracker.Instance.InitializeForLevel();
 
         var plane = GameObject.Find("Plane");
         if (!plane) return;
@@ -53,12 +50,10 @@ public class MealLauncher : MonoBehaviour
 
     public void Collect(GameObject mealGo)
     {
-        if(gameObject == mealGo)
+        if (gameObject == mealGo)
         {
             IsCollected = true;
-            _remainingMeals--;
-            _numMealCollected++;
-
+            MealTracker.Instance.CollectMeal();
             FindObjectOfType<MealIconsUI>()?.OnMealCollected();
         }
     }
@@ -67,10 +62,8 @@ public class MealLauncher : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.Space) && !IsLaunched && IsCollected)
         {
-            //FindObjectOfType<MealIconsUI>()?.OnMealDelivered();
             gameObject.GetComponentInChildren<MeshRenderer>().enabled = false;
             Launch();
-
         }
         else if (Input.GetKeyDown(KeyCode.R) && LevelManager.IsShortcutsEnabled)
         {
@@ -84,74 +77,70 @@ public class MealLauncher : MonoBehaviour
         {
             gameObject.GetComponentInChildren<MeshRenderer>().enabled = true;
         }
-        _numMealCollected = numLaunchedMeals = 0;
-        _remainingMeals = MaxMeals;
+
+        MealTracker.Instance.ResetAll();
         IsLaunched = false;
         IsCollected = false;
-        isLaunching = false;
         _airplaneController.Reset();
         UpdateMealCounterUI();
         ObjectiveManager.SetObjectiveText("Collect Meal");
         ObjectiveManager.SetObjectiveColor(false);
         FindObjectOfType<MealIconsUI>()?.ResetIcons();
     }
-    
+
     private IEnumerator ResetBallLaunched(float delayTime)
     {
         yield return new WaitForSeconds(delayTime);
-        isLaunching = false;
+        MealTracker.Instance.IsLaunching = false;
         ObjectiveManager.SetObjectiveText("Deliver Meal into Target");
         ObjectiveManager.SetObjectiveColor(true);
     }
-    
+
     public void UpdateMealCounterUI()
     {
-      //  ObjectiveManager.SetMealCounterText(_numMealCollected - numLaunchedMeals, _remainingMeals);
     }
-    
+
     public void Launch()
     {
-        if (gameObject == null || _launchPoint == null || IsLaunched || isLaunching)
-        {
-            Debug.LogWarning("Cannot deliver the meal either already dropped or null.");
-            Debug.LogWarning(
-    $"Cannot deliver meal: " +
-    $"gameObjectNull={gameObject == null}, " +
-    $"launchPointNull={_launchPoint == null}, " +
-    $"isLaunched={IsLaunched}, " +
-    $"isLaunching={isLaunching}");
+        var tracker = MealTracker.Instance;
 
+        if (gameObject == null || _launchPoint == null || IsLaunched || tracker.IsLaunching)
+        {
+            Debug.LogWarning(
+                $"Cannot deliver meal: " +
+                $"gameObjectNull={gameObject == null}, " +
+                $"launchPointNull={_launchPoint == null}, " +
+                $"isLaunched={IsLaunched}, " +
+                $"isLaunching={tracker.IsLaunching}");
             return;
         }
 
-        isLaunching = true;
+        tracker.IsLaunching = true;
 
-        // Create the meal
         GameObject meal = Instantiate(gameObject, _launchPoint.position, _launchPoint.rotation);
 
-        // Ensure it has a Rigidbody
         Rigidbody rb = meal.GetComponent<Rigidbody>();
         if (rb == null)
         {
             rb = meal.AddComponent<Rigidbody>();
         }
+
         MealLauncher mealLauncher = meal.GetComponent<MealLauncher>();
         IsLaunched = mealLauncher.IsLaunched = mealLauncher.IsCollected = true;
-        numLaunchedMeals++;
+
+        tracker.LaunchMeal();
         UpdateMealCounterUI();
+
         ObjectiveManager.SetObjectiveColor(false);
         ObjectiveManager.SetObjectiveText("Cooldown for relaunch");
         meal.GetComponentInChildren<MeshRenderer>().enabled = true;
-        // Reset velocity in case prefab had something
+
         rb.linearVelocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
-
-        // Apply initial velocity
         rb.linearVelocity = _launchPoint.TransformDirection(_initialVelocity);
 
         FindObjectOfType<MealIconsUI>()?.OnMealDelivered();
 
-        // Optional lifetime
         if (lifeTime > 0f)
         {
             Destroy(meal, lifeTime);

@@ -2,20 +2,25 @@ using UnityEngine;
 
 public class BoostTrigger : MonoBehaviour
 {
+    private bool _collected;
+
     private void OnTriggerEnter(Collider other)
     {
+        if (_collected) return;
+
         Transform root = other.transform.root;
 
-        // Option 1: Check by tag
         if (root.CompareTag("Player"))
         {
+            _collected = true;
+
             PlaneBoost boost = root.GetComponent<PlaneBoost>();
             if (boost != null)
             {
                 boost.EnableBoost();
             }
 
-            Destroy(gameObject); // optional: remove trigger after one use
+            Destroy(gameObject);
         }
     }
 }

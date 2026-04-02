@@ -10,23 +10,22 @@ public enum Level
     MedievalVillage = 2,
     FuturisticWorld = 3
 }
-public class LevelManager : MonoBehaviour
+
+// Singleton - uses its own instance for coroutines instead of temporary GameObjects.
+public class LevelManager : Singleton<LevelManager>
 {
     public static readonly bool IsShortcutsEnabled = false;
-    
-    public static Level currentLevel;
 
-    private static MetricsManager _metricsManager;
+    public static Level currentLevel;
 
     private void Start()
     {
         currentLevel = (Level)SceneManager.GetActiveScene().buildIndex;
-        _metricsManager = FindObjectOfType<MetricsManager>();
     }
 
     private void Update()
     {
-        if(!IsShortcutsEnabled) return;
+        if (!IsShortcutsEnabled) return;
         if (Input.GetKeyDown(KeyCode.M))
             LoadMainScreen();
         else if (Input.GetKeyDown(KeyCode.Alpha1))
@@ -44,20 +43,23 @@ public class LevelManager : MonoBehaviour
 
     public static void ProceedToNextLevel()
     {
-        void ExportMetricsToCsv(string levelName)
-        {
-            var telemetryManager = FindObjectOfType<TelemetryManager>();
-            if(telemetryManager)
-                telemetryManager.ExportMetricsToCsv(levelName);
-        }
-
         if (MetricsManager.IsTelemetryEnabled)
         {
             string levelName = SceneManager.GetActiveScene().name;
-            _metricsManager?.RecordDateTimeNowFor(MetricsManager.DateTimeSampleType.GameEnd);
-            ExportMetricsToCsv(levelName);
-            _metricsManager?.ReinitializeMetrics();
+
+            if (MetricsManager.Instance != null)
+            {
+                MetricsManager.Instance.RecordDateTimeNowFor(MetricsManager.DateTimeSampleType.GameEnd);
+            }
+
+            var telemetryManager = FindObjectOfType<TelemetryManager>();
+            if (telemetryManager)
+                telemetryManager.ExportMetricsToCsv(levelName);
+
+            MetricsManager.Instance?.ReinitializeMetrics();
         }
+
+        GameEvents.FireLevelComplete();
         LoadLevel(++currentLevel);
     }
 
@@ -65,27 +67,36 @@ public class LevelManager : MonoBehaviour
     {
         SceneManager.LoadScene("MainMenu");
         Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;   
+        Cursor.visible = true;
     }
+
     private static void LoadLevel(Level level, float delay = 0f)
     {
-        IEnumerator LoadLevel(Level levelToLoad, float delayTime)
+        if (Instance != null)
         {
-            yield return new WaitForSeconds(delayTime);
-            var loadingScreenManagerGo = new GameObject("LoadingScreen");
-            var loadingScreenManager = loadingScreenManagerGo.AddComponent<LoadingScreenManager>();
-            loadingScreenManager.ShowLoadingScreen((int)levelToLoad);
-            MealLauncher.shouldResetForNextLevel = true;
-            currentLevel = levelToLoad;
-            SceneManager.LoadScene((int)levelToLoad);
+            Instance.StartCoroutine(LoadLevelCoroutine(level, delay));
         }
-        GameObject go = new GameObject("LevelManager");
-        var levelManager = go.AddComponent<LevelManager>();
-        levelManager.StartCoroutine(LoadLevel(level, delay));
+        else
+        {
+            GameObject go = new GameObject("LevelManagerTemp");
+            var tempManager = go.AddComponent<LevelManager>();
+            tempManager.StartCoroutine(LoadLevelCoroutine(level, delay));
+        }
+    }
+
+    private static IEnumerator LoadLevelCoroutine(Level levelToLoad, float delayTime)
+    {
+        yield return new WaitForSeconds(delayTime);
+        var loadingScreenManagerGo = new GameObject("LoadingScreen");
+        var loadingScreenManager = loadingScreenManagerGo.AddComponent<LoadingScreenManager>();
+        loadingScreenManager.ShowLoadingScreen((int)levelToLoad);
+        MealLauncher.shouldResetForNextLevel = true;
+        currentLevel = levelToLoad;
+        SceneManager.LoadScene((int)levelToLoad);
     }
 
     public static void LoadLevelNow(Level levelToLoad)
     {
-        LoadLevel(levelToLoad,0);
+        LoadLevel(levelToLoad, 0);
     }
 }

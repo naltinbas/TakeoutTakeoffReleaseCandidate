@@ -2,17 +2,22 @@ using UnityEngine;
 
 public class ShieldPowerUp : MonoBehaviour
 {
-    [SerializeField] private float shieldDuration = 3f; // customizable duration
+    [SerializeField] private float shieldDuration = 3f;
+
+    private bool _collected;
 
     private void OnTriggerEnter(Collider other)
     {
-        // Check if the player hit the power-up
+        if (_collected) return;
+
         PlaneHearts planeHearts = other.transform.root.GetComponent<PlaneHearts>();
         if (planeHearts != null)
         {
-            planeHearts.PickupShield();      // Enable shield icon
+            _collected = true;
+
+            planeHearts.PickupShield();
             AudioSourceManager.PlaySound("GetShield");
-            Destroy(gameObject);             // Remove the power-up from the scene
+            Destroy(gameObject);
         }
     }
 }

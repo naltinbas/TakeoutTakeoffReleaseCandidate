@@ -8,7 +8,7 @@ public class ObstructionSpawner : MonoBehaviour
     [SerializeField] private GameObject cloudsPrefab;
     private GameObject _player;
 
-    private readonly List<GameObject> activeObstructions = new();
+    private readonly List<GameObject> _activeObstructions = new();
 
     [Header("Base Speeds")]
     [SerializeField] private float cloudSpeed = 1f;
@@ -39,7 +39,7 @@ public class ObstructionSpawner : MonoBehaviour
     {
         _player = GameObject.FindGameObjectWithTag("Player");
 
-        // Apply difficulty-based settings here
+        // Strategy pattern - load from data config instead of hardcoded switch
         ApplyDifficultySettings(GameManager.CurrentDifficulty);
 
         StartCoroutine(RepeatAction());
@@ -47,12 +47,12 @@ public class ObstructionSpawner : MonoBehaviour
 
     private void Update()
     {
-        for (int i = activeObstructions.Count - 1; i >= 0; i--)
+        for (int i = _activeObstructions.Count - 1; i >= 0; i--)
         {
-            GameObject obj = activeObstructions[i];
+            GameObject obj = _activeObstructions[i];
             if (obj == null)
             {
-                activeObstructions.RemoveAt(i);
+                _activeObstructions.RemoveAt(i);
                 continue;
             }
 
@@ -61,11 +61,11 @@ public class ObstructionSpawner : MonoBehaviour
             obj.transform.Translate(backDirection * (speed * Time.deltaTime), Space.World);
 
             var proj = Vector3.Project(obj.transform.position - _player.transform.position, backDirection);
-            
+
             if (proj.magnitude > 15f && Vector3.Dot(obj.transform.position - _player.transform.position, backDirection) > 0f)
             {
                 Destroy(obj);
-                activeObstructions.RemoveAt(i);
+                _activeObstructions.RemoveAt(i);
             }
         }
     }
@@ -76,36 +76,16 @@ public class ObstructionSpawner : MonoBehaviour
             offsetX = Mathf.Abs(_player.transform.forward.x) > 0.5f ? Mathf.Sign(_player.transform.forward.x) * Random.Range(7.5f, 50f) : 0;
         Vector3 pos = _player.transform.position + new Vector3(offsetX, 0, offsetZ);
         GameObject obj = Instantiate(prefab, pos, Quaternion.identity);
-        activeObstructions.Add(obj);
+        _activeObstructions.Add(obj);
     }
 
     private void ApplyDifficultySettings(Difficulty difficulty)
     {
-        switch (difficulty)
-        {
-            case Difficulty.Easy:
-                cloudSpeed = 1f;
-                birdSpeed = 2f;
-                spawnInterval = 4f;
-                minSpawnInterval = 3f;
-                maxSpawnInterval = 5.5f;
-                break;
-
-            case Difficulty.Medium:
-                cloudSpeed = 2.5f;
-                birdSpeed = 3.5f;
-                spawnInterval = 2.5f;
-                minSpawnInterval = 2f;
-                maxSpawnInterval = 4.5f;
-                break;
-
-            case Difficulty.Hard:
-                cloudSpeed = 3.5f;
-                birdSpeed = 5f;
-                spawnInterval = 1.5f;
-                minSpawnInterval = 1f;
-                maxSpawnInterval = 3f;
-                break;
-        }
+        var config = DifficultyConfig.GetConfig(difficulty);
+        cloudSpeed = config.CloudSpeed;
+        birdSpeed = config.BirdSpeed;
+        spawnInterval = config.SpawnInterval;
+        minSpawnInterval = config.MinSpawnInterval;
+        maxSpawnInterval = config.MaxSpawnInterval;
     }
 }

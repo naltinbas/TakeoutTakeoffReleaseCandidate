@@ -22,48 +22,33 @@ public class GameManager : MonoBehaviour
     [SerializeField] private Button controlsButton;
     [SerializeField] private Button quitButton;
 
-    private bool hasPickedAnyLevel;
-
-    private bool hasRevealedDifficultySelector;
-
+    private bool _hasPickedAnyLevel;
+    private bool _hasRevealedDifficultySelector;
     private MetricsManager _metricsManager;
+
+    public static Difficulty CurrentDifficulty { get; private set; }
 
     private void Start()
     {
         var pizzaCursor = Resources.Load<Texture2D>("cursorSmall");
-        Cursor.SetCursor(pizzaCursor, new Vector2(8,56), CursorMode.Auto);
+        Cursor.SetCursor(pizzaCursor, new Vector2(8, 56), CursorMode.Auto);
+        GameState.Current = GameStateType.Menu;
     }
 
-    public static Difficulty CurrentDifficulty { get;private set; }
     private void Awake()
     {
-        void SetActiveDifficultySelectionButtons(bool isActive = true)
-        {
-            easyButton.gameObject.SetActive(isActive);
-            mediumButton.gameObject.SetActive(isActive);
-            hardButton.gameObject.SetActive(isActive);
-        }
-        void SetActiveLevelSelectionButtons(bool isActive = true)
-        {
-            level1Button.gameObject.SetActive(isActive);
-            level2Button.gameObject.SetActive(isActive);
-            level3Button.gameObject.SetActive(isActive);
-        }
-        void GoForward()
-        {
-            SetActiveLevelSelectionButtons(false);
-            SetActiveDifficultySelectionButtons();
-            backButton.gameObject.SetActive(true);
-        }
-        void GoBack()
-        {
-            SetActiveDifficultySelectionButtons(false);
-            SetActiveLevelSelectionButtons();
-            backButton.gameObject.SetActive(false);
-        }
+        ControlsScreen.StartGame += StartGame;
+        SetupLevelButtons();
+        SetupDifficultyButtons();
+        backButton.onClick.AddListener(GoBack);
+        controlsButton.onClick.AddListener(CreateRevealControlsAction());
+        quitButton.onClick.AddListener(Application.Quit);
+        _metricsManager = FindObjectOfType<MetricsManager>();
+    }
 
-        ControlsScreen.StartGame += StartGame;      
-        level1Button.onClick.AddListener(()=>
+    private void SetupLevelButtons()
+    {
+        level1Button.onClick.AddListener(() =>
         {
             SetLevel(Level.FantasyVillage);
             GoForward();
@@ -78,6 +63,10 @@ public class GameManager : MonoBehaviour
             SetLevel(Level.FuturisticWorld);
             GoForward();
         });
+    }
+
+    private void SetupDifficultyButtons()
+    {
         easyButton.onClick.AddListener(() =>
         {
             CurrentDifficulty = Difficulty.Easy;
@@ -93,10 +82,34 @@ public class GameManager : MonoBehaviour
             CurrentDifficulty = Difficulty.Hard;
             HandleStartGame();
         });
-        backButton.onClick.AddListener(GoBack);
-        controlsButton.onClick.AddListener(RevealControls());
-        quitButton.onClick.AddListener(Application.Quit);
-        _metricsManager = FindObjectOfType<MetricsManager>();
+    }
+
+    private void SetActiveDifficultySelectionButtons(bool isActive = true)
+    {
+        easyButton.gameObject.SetActive(isActive);
+        mediumButton.gameObject.SetActive(isActive);
+        hardButton.gameObject.SetActive(isActive);
+    }
+
+    private void SetActiveLevelSelectionButtons(bool isActive = true)
+    {
+        level1Button.gameObject.SetActive(isActive);
+        level2Button.gameObject.SetActive(isActive);
+        level3Button.gameObject.SetActive(isActive);
+    }
+
+    private void GoForward()
+    {
+        SetActiveLevelSelectionButtons(false);
+        SetActiveDifficultySelectionButtons();
+        backButton.gameObject.SetActive(true);
+    }
+
+    private void GoBack()
+    {
+        SetActiveDifficultySelectionButtons(false);
+        SetActiveLevelSelectionButtons();
+        backButton.gameObject.SetActive(false);
     }
 
     private void SetLevel(Level level)
@@ -109,27 +122,25 @@ public class GameManager : MonoBehaviour
         if (ControlsScreen.hasAlreadyRevealed)
             StartGame();
         else
-            RevealControls(true).Invoke();
+            CreateRevealControlsAction(true).Invoke();
     }
 
-    private UnityAction RevealControls(bool shouldStartGame = false)
+    private UnityAction CreateRevealControlsAction(bool shouldStartGame = false)
     {
-        void RevealControls(bool shouldStartGame = false)
+        return () =>
         {
             ControlsScreen.hasAlreadyRevealed = false;
             var controlsScreen = gameObject.AddComponent<ControlsScreen>();
             controlsScreen.shouldStartGame = shouldStartGame;
-        }
-        return () =>
-        {
-            RevealControls(shouldStartGame);
         };
     }
 
     private void StartGame()
     {
         Time.timeScale = 1;
+        GameState.Current = GameStateType.Playing;
         _metricsManager?.RecordDateTimeNowFor(MetricsManager.DateTimeSampleType.GameStart);
+        GameEvents.FireGameStart();
         LevelManager.LoadLevelNow(LevelManager.currentLevel);
     }
 }

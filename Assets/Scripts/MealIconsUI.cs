@@ -14,15 +14,15 @@ public class MealIconsUI : MonoBehaviour
     [Header("Progress Bar Settings")]
     [SerializeField] private Image progressBarFill; // Assign your ProgressBarFill image here
 
-    private List<Image> burgerIcons = new List<Image>();
-    private int maxMeals;
-    private int collectedMeals = 0;
-    private int deliveredMeals = 0;
+    private List<Image> _burgerIcons = new List<Image>();
+    private int _maxMeals;
+    private int _collectedMeals = 0;
+    private int _deliveredMeals = 0;
 
     private IEnumerator Start()
     {
         yield return null; // Wait for MealLauncher to initialize
-        maxMeals = MealLauncher.MaxMeals;
+        _maxMeals = MealLauncher.MaxMeals;
         GenerateIcons();
         UpdateIconsUI();
         UpdateProgressBar(); // initialize progress bar
@@ -33,24 +33,24 @@ public class MealIconsUI : MonoBehaviour
         foreach (Transform child in iconsParent)
             Destroy(child.gameObject);
 
-        burgerIcons.Clear();
+        _burgerIcons.Clear();
 
-        for (int i = 0; i < maxMeals; i++)
+        for (int i = 0; i < _maxMeals; i++)
         {
             Image newIcon = Instantiate(iconPrefab, iconsParent);
             newIcon.sprite = emptyBurgerSprite;
             newIcon.gameObject.SetActive(true);
-            burgerIcons.Add(newIcon);
+            _burgerIcons.Add(newIcon);
         }
     }
 
     // Called when burger (meal) is collected
     public void OnMealCollected()
     {
-        if (collectedMeals < burgerIcons.Count)
+        if (_collectedMeals < _burgerIcons.Count)
         {
-            burgerIcons[collectedMeals].sprite = filledBurgerSprite;
-            collectedMeals++;
+            _burgerIcons[_collectedMeals].sprite = filledBurgerSprite;
+            _collectedMeals++;
             // Progress bar NOT updated here (only updates on delivery)
         }
     }
@@ -58,36 +58,36 @@ public class MealIconsUI : MonoBehaviour
     // Called when meal is successfully delivered
     public void OnMealDelivered()
     {
-        if (deliveredMeals < collectedMeals)
+        if (_deliveredMeals < _collectedMeals)
         {
-            burgerIcons[deliveredMeals].gameObject.SetActive(false);
-            deliveredMeals++;
+            _burgerIcons[_deliveredMeals].gameObject.SetActive(false);
+            _deliveredMeals++;
             UpdateProgressBar(); // Progress bar updates here
         }
     }
 
     public void ResetIcons()
     {
-        collectedMeals = 0;
-        deliveredMeals = 0;
+        _collectedMeals = 0;
+        _deliveredMeals = 0;
         UpdateIconsUI();
         UpdateProgressBar();
     }
 
     private void UpdateIconsUI()
     {
-        for (int i = 0; i < burgerIcons.Count; i++)
+        for (int i = 0; i < _burgerIcons.Count; i++)
         {
-            burgerIcons[i].gameObject.SetActive(true);
-            burgerIcons[i].sprite = emptyBurgerSprite;
+            _burgerIcons[i].gameObject.SetActive(true);
+            _burgerIcons[i].sprite = emptyBurgerSprite;
         }
     }
 
     private void UpdateProgressBar()
     {
-        if (progressBarFill != null && maxMeals > 0)
+        if (progressBarFill != null && _maxMeals > 0)
         {
-            float fillPercent = (float)deliveredMeals / maxMeals;
+            float fillPercent = (float)_deliveredMeals / _maxMeals;
             progressBarFill.fillAmount = fillPercent;
         }
     }

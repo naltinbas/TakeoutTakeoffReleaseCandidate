@@ -4,18 +4,22 @@ public class ObstacleDamage : MonoBehaviour
 {
     [SerializeField] private int damage = 1;
 
+    private bool _hit;
+
     private void OnTriggerEnter(Collider other)
     {
+        if (_hit) return;
+
         if (other.transform.root.CompareTag("Player"))
         {
+            _hit = true;
+
             PlaneHearts planeHearts = other.transform.root.GetComponent<PlaneHearts>();
             if (planeHearts != null)
             {
-                // Apply heart-based damage
                 planeHearts.TakeDamage(damage);
             }
 
-            // Optional: destroy the obstacle on hit
             Destroy(gameObject);
         }
     }

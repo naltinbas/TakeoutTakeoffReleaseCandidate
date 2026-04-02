@@ -9,7 +9,7 @@ public class FuelSystem : MonoBehaviour
     public float maxFuel = 100f;
     public float consumptionRate = 5f; // units per second
     public float lowFuelThreshold = 0.25f; // 25% triggers yellow pulse
-    private Vector3 baseScale;
+    private Vector3 _baseScale;
 
     [Header("UI")]
     public Image fuelFill;
@@ -28,28 +28,28 @@ public class FuelSystem : MonoBehaviour
     [Header("Plane Reference")]
     public AirplaneController airplaneController;
 
-    private float currentFuel;
-    private bool isLowFuel = false;
-    private bool isEmpty = false;
-    private Coroutine heartbeatRoutine;
-    private Coroutine glowRoutine;
+    private float _currentFuel;
+    private bool _isLowFuel = false;
+    private bool _isEmpty = false;
+    private Coroutine _heartbeatRoutine;
+    private Coroutine _glowRoutine;
 
     void Start()
     {
-        baseScale = fuelPanelToPulse.localScale;
-        currentFuel = maxFuel;
+        _baseScale = fuelPanelToPulse.localScale;
+        _currentFuel = maxFuel;
         UpdateUI();
     }
 
     void Update()
     {
-        if (isEmpty) return;
+        if (_isEmpty) return;
 
         // Consume fuel over time
-        currentFuel -= consumptionRate * Time.deltaTime;
-        currentFuel = Mathf.Max(0, currentFuel);
+        _currentFuel -= consumptionRate * Time.deltaTime;
+        _currentFuel = Mathf.Max(0, _currentFuel);
 
-        float fuelPercent = currentFuel / maxFuel;
+        float fuelPercent = _currentFuel / maxFuel;
         fuelFill.fillAmount = fuelPercent;
 
         // Full (green)
@@ -58,29 +58,29 @@ public class FuelSystem : MonoBehaviour
             fuelFill.color = fullFuelColor;
         }
         // Low (yellow + gentle pulse)
-        else if (fuelPercent > 0 && !isEmpty)
+        else if (fuelPercent > 0 && !_isEmpty)
         {
             fuelFill.color = lowFuelColor;
 
-            if (!isLowFuel)
+            if (!_isLowFuel)
             {
-                isLowFuel = true;
+                _isLowFuel = true;
                 StartHeartbeat(3.5f, 0.1f);
             }
         }
 
         // Stop heartbeat if refueled
-        if (isLowFuel && fuelPercent > lowFuelThreshold)
+        if (_isLowFuel && fuelPercent > lowFuelThreshold)
         {
-            isLowFuel = false;
+            _isLowFuel = false;
             StopHeartbeat();
         }
 
         // Empty (red fill, no pulse)
-        if (!isEmpty && currentFuel <= 0)
+        if (!_isEmpty && _currentFuel <= 0)
         {
-            isEmpty = true;
-            isLowFuel = false;
+            _isEmpty = true;
+            _isLowFuel = false;
 
             StopHeartbeat(); // Stop any existing pulse
             fuelFill.fillAmount = 1f; // Fill completely red
@@ -89,7 +89,7 @@ public class FuelSystem : MonoBehaviour
 
             airplaneController.OnFuelEmpty();
         }
-        else if (!isEmpty)
+        else if (!_isEmpty)
         {
             fuelLabel.text = "Fuel";
         }
@@ -97,42 +97,42 @@ public class FuelSystem : MonoBehaviour
 
     void StartHeartbeat(float speed, float magnitude)
     {
-        if (heartbeatRoutine == null)
-            heartbeatRoutine = StartCoroutine(Heartbeat(speed, magnitude));
+        if (_heartbeatRoutine == null)
+            _heartbeatRoutine = StartCoroutine(Heartbeat(speed, magnitude));
     }
 
     void StopHeartbeat()
     {
-        if (heartbeatRoutine != null)
+        if (_heartbeatRoutine != null)
         {
-            StopCoroutine(heartbeatRoutine);
-            heartbeatRoutine = null;
+            StopCoroutine(_heartbeatRoutine);
+            _heartbeatRoutine = null;
         }
-        fuelPanelToPulse.localScale = baseScale;
+        fuelPanelToPulse.localScale = _baseScale;
     }
 
     IEnumerator Heartbeat(float speed, float magnitude)
     {
-        Vector3 baseScale = fuelPanelToPulse.localScale;
+        Vector3 _baseScale = fuelPanelToPulse.localScale;
 
         while (true)
         {
             float t = Mathf.Sin(Time.time * speed * Mathf.PI) * 0.5f + 0.5f;
-            fuelPanelToPulse.localScale = baseScale * (1f + t * magnitude);
+            fuelPanelToPulse.localScale = _baseScale * (1f + t * magnitude);
             yield return null;
         }
     }
 
     void UpdateUI()
     {
-        fuelFill.fillAmount = currentFuel / maxFuel;
+        fuelFill.fillAmount = _currentFuel / maxFuel;
         fuelFill.color = fullFuelColor;
         fuelLabel.text = "Fuel";
     }
 
     public void AddFuel(float amount)
     {
-        currentFuel = Mathf.Min(currentFuel + amount, maxFuel);
+        _currentFuel = Mathf.Min(_currentFuel + amount, maxFuel);
         UpdateUI();
         PlayFuelGlow(); // Trigger glow when fuel increases
     }
@@ -140,10 +140,10 @@ public class FuelSystem : MonoBehaviour
     // Glow Effect Coroutine
     public void PlayFuelGlow()
     {
-        if (glowRoutine != null)
-            StopCoroutine(glowRoutine);
+        if (_glowRoutine != null)
+            StopCoroutine(_glowRoutine);
 
-        glowRoutine = StartCoroutine(FuelGlowEffect());
+        _glowRoutine = StartCoroutine(FuelGlowEffect());
     }
 
     private IEnumerator FuelGlowEffect()
@@ -160,14 +160,14 @@ public class FuelSystem : MonoBehaviour
         }
 
         fuelFill.color = baseColor;
-        glowRoutine = null;
+        _glowRoutine = null;
     }
 
     public void ResetFuel()
     {
-        currentFuel = maxFuel;
-        isEmpty = false;
-        isLowFuel = false;
+        _currentFuel = maxFuel;
+        _isEmpty = false;
+        _isLowFuel = false;
         StopHeartbeat();
         UpdateUI();
     }

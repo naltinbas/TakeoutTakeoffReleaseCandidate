@@ -3,54 +3,40 @@ using UnityEngine;
 
 public class ObstructionCollisionHandler : MonoBehaviour
 {
-    
-    private CinemachineImpulseSource impulseSource;
-    private float flashScale = 1f;
+    private CinemachineImpulseSource _impulseSource;
+    private float _flashScale = 1f;
+    private bool _hit;
 
     void Awake()
     {
-        impulseSource = GameObject.Find("Camera").GetComponent<CinemachineImpulseSource>();
+        _impulseSource = GameObject.Find("Camera").GetComponent<CinemachineImpulseSource>();
     }
 
     public void Shake(float intensity = 1f)
     {
-        impulseSource.GenerateImpulse(intensity);
-        if (DamageFeedback.Instance) DamageFeedback.Instance.Flash(intensity * flashScale);
+        _impulseSource.GenerateImpulse(intensity);
+        if (DamageFeedback.Instance) DamageFeedback.Instance.Flash(intensity * _flashScale);
     }
+
     private void OnTriggerEnter(Collider collider)
     {
+        if (_hit) return;
+
         if (collider.transform.CompareTag("Shield"))
         {
+            _hit = true;
             Destroy(gameObject);
             AudioSourceManager.PlaySound(gameObject.name);
             return;
         }
-        
+
         if (collider.transform.root.CompareTag("Player"))
         {
+            _hit = true;
             Destroy(gameObject);
             AudioSourceManager.PlaySound(gameObject.name);
             Shake();
-            RecordCollsion(gameObject.name);
+            GameEvents.FireObstructionHit(gameObject.name);
         }
-    }
-
-    private void RecordCollsion(string collidedObjectName)
-    {
-        if(!MetricsManager.IsTelemetryEnabled) return;
-        var metricsManager = FindObjectOfType<MetricsManager>();
-        if(!metricsManager) return;
-        MetricsManager.AccumulationType accumulationType = MetricsManager.AccumulationType.None;
-        switch (collidedObjectName)
-        {
-            case "Birds":
-                accumulationType = MetricsManager.AccumulationType.BirdCollision;
-                break;
-            case "Cloud":
-                accumulationType = MetricsManager.AccumulationType.CloudCollision;
-                break;
-        }
-        if(accumulationType == MetricsManager.AccumulationType.None) return;
-        metricsManager.Record(accumulationType);
     }
 }

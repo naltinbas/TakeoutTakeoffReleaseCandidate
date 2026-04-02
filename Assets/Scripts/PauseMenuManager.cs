@@ -24,22 +24,22 @@ public class PauseMenuManager : MonoBehaviour
         IPointerDownHandler, IPointerUpHandler, IPointerExitHandler
     {
         [Header("Animation")]
-        [SerializeField] float pressScale = 0.93f;
-        [SerializeField] float downTime  = 0.06f;
-        [SerializeField] float upTime    = 0.10f;
+        [SerializeField] private float pressScale = 0.93f;
+        [SerializeField] private float downTime  = 0.06f;
+        [SerializeField] private float upTime    = 0.10f;
 
         [Header("Tint (optional)")]
-        [SerializeField] bool  useTint   = false;
-        [SerializeField] Color pressTint = new Color(0.95f, 0.95f, 0.95f, 1f);
+        [SerializeField] private bool  useTint   = false;
+        [SerializeField] private Color pressTint = new Color(0.95f, 0.95f, 0.95f, 1f);
 
-        Vector3 _startScale;
-        Image   _img;
-        Color   _startColor;
-        bool    _pressed;
-        float   _t;           // 0..1 lerp param
-        float   _dur;         // current anim duration
-        Vector3 _targetScale;
-        Color   _targetColor;
+        private Vector3 _startScale;
+        private Image   _img;
+        private Color   _startColor;
+        private bool    _pressed;
+        private float   _t;           // 0..1 lerp param
+        private float   _dur;         // current anim duration
+        private Vector3 _targetScale;
+        private Color   _targetColor;
 
         void Awake()
         {
@@ -178,13 +178,13 @@ public class PauseMenuManager : MonoBehaviour
         var img = _bg.AddComponent<Image>();
         img.sprite = _sprBg;
         img.type = Image.Type.Simple;
-        img.preserveAspect = true;     // we’ll still set a cover size
+        img.preserveAspect = true;     // we will still set a cover size
         img.raycastTarget = false;
 
-        // size it once now…
+        // size it once now...
         SizeImageToCover(rt, _sprBg);
 
-        // …and keep it correct when the canvas changes size/aspect
+        // ...and keep it correct when the canvas changes size/aspect
         _bg.AddComponent<OnRectChanged>().Init(rt, _sprBg, SizeImageToCover);
 
         // ensure it renders *behind* overlay and card
@@ -483,6 +483,8 @@ public class PauseMenuManager : MonoBehaviour
         AudioSourceManager.PauseAudio();
         _isPaused = true;
         Time.timeScale = 0f;
+        GameState.Current = GameStateType.Paused;
+        GameEvents.FireGamePause();
         SetActiveUI(true);
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
@@ -494,6 +496,8 @@ public class PauseMenuManager : MonoBehaviour
         AudioSourceManager.ResumeAudio();
         _isPaused = false;
         Time.timeScale = 1f;
+        GameState.Current = GameStateType.Playing;
+        GameEvents.FireGameResume();
         SetActiveUI(false);
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;

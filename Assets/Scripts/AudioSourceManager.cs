@@ -1,12 +1,29 @@
-using System;
+using System.Collections.Generic;
 using UnityEngine;
 
-public class AudioSourceManager : MonoBehaviour
+// Singleton audio manager. Caches clips in a dictionary and uses
+// dictionary lookup for tag-to-sound mapping.
+public class AudioSourceManager : Singleton<AudioSourceManager>
 {
     private static GameObject _audioObj;
-    private static AudioSource _persistentAudioSource;      // main flying sound
+    private static AudioSource _persistentAudioSource;
     private static AudioSource _themeMusicSource;
-    private static AudioSource _tempAudioSource;  // for temporary one-shots
+    private static AudioSource _tempAudioSource;
+
+    private static readonly Dictionary<string, AudioClip> ClipCache = new();
+
+    private static readonly Dictionary<string, string> TagToSound = new()
+    {
+        { "Player", "register" },
+        { "Target", "success" },
+        { "Ground", "failure" },
+        { "Birds", "chirping" },
+        { "Cloud", "thunder" },
+        { "GetShield", "shieldAcquired" },
+        { "UseShield", "shieldUsed" },
+        { "UseBoost", "boostUsed" },
+        { "GetBoost", "boostAcquired" }
+    };
 
     void Start()
     {
@@ -19,19 +36,34 @@ public class AudioSourceManager : MonoBehaviour
         _tempAudioSource = _audioObj.AddComponent<AudioSource>();
     }
 
+    private static AudioClip GetClip(string clipName)
+    {
+        if (ClipCache.TryGetValue(clipName, out var cached))
+            return cached;
+
+        var clip = Resources.Load<AudioClip>(clipName);
+        if (clip != null)
+            ClipCache[clipName] = clip;
+
+        return clip;
+    }
+
     private static void PlayTempSound(string soundName)
     {
-        bool isShieldActive = _tempAudioSource.clip == Resources.Load<AudioClip>("shieldUsed") && _tempAudioSource.isPlaying,
-            isBoostActive = _tempAudioSource.clip == Resources.Load<AudioClip>("boostUsed") && _tempAudioSource.isPlaying,
-            shouldPlay = (!isShieldActive && !isBoostActive) || soundName == "crash";
+        var shieldClip = GetClip("shieldUsed");
+        var boostClip = GetClip("boostUsed");
 
-        if ((isShieldActive || isBoostActive) 
-            && soundName is "register" or "success" or "failure" 
-                or "boostAcquired" or "shieldAcquired" 
+        bool isShieldActive = _tempAudioSource.clip == shieldClip && _tempAudioSource.isPlaying;
+        bool isBoostActive = _tempAudioSource.clip == boostClip && _tempAudioSource.isPlaying;
+        bool shouldPlay = (!isShieldActive && !isBoostActive) || soundName == "crash";
+
+        if ((isShieldActive || isBoostActive)
+            && soundName is "register" or "success" or "failure"
+                or "boostAcquired" or "shieldAcquired"
                 or "boostUsed" or "shieldUsed")
         {
             var simultaneousAudioSource = _audioObj.AddComponent<AudioSource>();
-            simultaneousAudioSource.clip = Resources.Load<AudioClip>(soundName);
+            simultaneousAudioSource.clip = GetClip(soundName);
             simultaneousAudioSource.Play();
             Destroy(simultaneousAudioSource, simultaneousAudioSource.clip.length);
             return;
@@ -39,37 +71,24 @@ public class AudioSourceManager : MonoBehaviour
 
         if (!shouldPlay) return;
 
-        _tempAudioSource.clip = Resources.Load<AudioClip>(soundName);
+        _tempAudioSource.clip = GetClip(soundName);
         _tempAudioSource.Play();
     }
 
     public static void PlaySound(string tag)
     {
-        string soundName = tag switch
-        {
-            "Player" => "register",
-            "Target" => "success",
-            "Ground" => "failure",
-            "Birds" => "chirping",
-            "Cloud" => "thunder",
-            "GetShield" => "shieldAcquired",
-            "UseShield" => "shieldUsed",
-            "UseBoost" => "boostUsed",
-            "GetBoost" => "boostAcquired",
-            _ => tag
-        };
+        string soundName = TagToSound.TryGetValue(tag, out var mapped) ? mapped : tag;
         PlayTempSound(soundName);
     }
-    
+
     private static void StopAudio()
     {
         if (_persistentAudioSource)
             _persistentAudioSource.Stop();
-        if(_tempAudioSource)
+        if (_tempAudioSource)
             _tempAudioSource.Stop();
     }
 
-    // Pause continuous flying sound
     public static void PauseAudio()
     {
         if (_persistentAudioSource && _persistentAudioSource.isPlaying)
@@ -80,21 +99,19 @@ public class AudioSourceManager : MonoBehaviour
 
     private static void SetLevelPersistentAudioClip(float volume = 1f)
     {
-        switch (LevelManager.currentLevel)
+        StopAudio();
+
+        string clipName = LevelManager.currentLevel switch
         {
-            case Level.FantasyVillage:
-                StopAudio();
-                _persistentAudioSource.clip = Resources.Load<AudioClip>("engine_toy_plane");
-                break;
-            case Level.MedievalVillage:
-                StopAudio();
-                _persistentAudioSource.clip = Resources.Load<AudioClip>("engine_medieval_plane");
-                break;
-            case Level.FuturisticWorld:
-                StopAudio();
-                _persistentAudioSource.clip = Resources.Load<AudioClip>("engine_spacecraft");
-                break;
-        }
+            Level.FantasyVillage => "engine_toy_plane",
+            Level.MedievalVillage => "engine_medieval_plane",
+            Level.FuturisticWorld => "engine_spacecraft",
+            _ => null
+        };
+
+        if (clipName == null) return;
+
+        _persistentAudioSource.clip = GetClip(clipName);
         _persistentAudioSource.loop = true;
         _persistentAudioSource.volume = volume;
         _persistentAudioSource.Play();
@@ -103,27 +120,24 @@ public class AudioSourceManager : MonoBehaviour
     private static void SetThemeAudioClip(float volume = 1f)
     {
         StopAudio();
-        switch (LevelManager.currentLevel)
+
+        string clipName = LevelManager.currentLevel switch
         {
-            case Level.TitleMenu:
-                _themeMusicSource.clip = Resources.Load<AudioClip>("theme_main_menu");
-                break;
-            case Level.FantasyVillage:
-                _themeMusicSource.clip = Resources.Load<AudioClip>("theme_level_1");
-                break;
-            case Level.MedievalVillage:
-                _themeMusicSource.clip = Resources.Load<AudioClip>("theme_level_2");
-                break;
-            case Level.FuturisticWorld:
-                _themeMusicSource.clip = Resources.Load<AudioClip>("theme_level_3");
-                break;
-        }
+            Level.TitleMenu => "theme_main_menu",
+            Level.FantasyVillage => "theme_level_1",
+            Level.MedievalVillage => "theme_level_2",
+            Level.FuturisticWorld => "theme_level_3",
+            _ => null
+        };
+
+        if (clipName == null) return;
+
+        _themeMusicSource.clip = GetClip(clipName);
         _themeMusicSource.loop = true;
         _themeMusicSource.volume = volume;
         _themeMusicSource.Play();
     }
 
-    // Play flying sound
     public static void PlayPersistentAudio()
     {
         if (_persistentAudioSource)
@@ -131,7 +145,7 @@ public class AudioSourceManager : MonoBehaviour
         if (_themeMusicSource && !_themeMusicSource.isPlaying)
             _themeMusicSource.Play();
     }
-    
+
     public static void ResumeAudio()
     {
         if (_persistentAudioSource && !_persistentAudioSource.isPlaying)

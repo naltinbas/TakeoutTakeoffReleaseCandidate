@@ -6,26 +6,26 @@ public class PeopleJump : MonoBehaviour
     public float jumpHeight = 0.5f;    // how high the person jumps
     public float jumpSpeed = 3f;       // how fast the person jumps
 
-    private Vector3 baseLocalPosition; // starting position of the person
-    private float randomOffset;        // random timing offset so not all jump in sync
+    private Vector3 _baseLocalPosition; // starting position of the person
+    private float _randomOffset;        // random timing offset so not all jump in sync
 
     void Start()
     {
         // Save the starting local position so jumps happen around it
-        baseLocalPosition = transform.localPosition;
+        _baseLocalPosition = transform.localPosition;
 
         // Randomize the offset to desync different people
-        randomOffset = Random.Range(0f, Mathf.PI * 2f);
+        _randomOffset = Random.Range(0f, Mathf.PI * 2f);
     }
 
     void Update()
     {
-        // Make it jump smoothly up and down with sine wave, desynced by randomOffset
-        float newY = baseLocalPosition.y + Mathf.Abs(Mathf.Sin(Time.time * jumpSpeed + randomOffset)) * jumpHeight;
+        // Make it jump smoothly up and down with sine wave, desynced by _randomOffset
+        float newY = _baseLocalPosition.y + Mathf.Abs(Mathf.Sin(Time.time * jumpSpeed + _randomOffset)) * jumpHeight;
         transform.localPosition = new Vector3(
-            baseLocalPosition.x,
+            _baseLocalPosition.x,
             newY,
-            baseLocalPosition.z
+            _baseLocalPosition.z
         );
     }
 }

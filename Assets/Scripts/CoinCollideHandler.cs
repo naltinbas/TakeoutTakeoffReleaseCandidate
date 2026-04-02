@@ -14,15 +14,6 @@ public class CoinCollideHandler : MonoBehaviour
             Destroy(gameObject);
         }
 
-        void HandleTargetTelemetryFor(MetricsManager.DateTimeSampleType dateTimeSampleType)
-        {
-            if(!MetricsManager.IsTelemetryEnabled) return;
-            var metricsManager = FindObjectOfType<MetricsManager>();
-            if(!metricsManager) return;
-            var dateTime = DateTime.Now;
-            metricsManager.Record(dateTime, dateTimeSampleType);
-        }
-        
         MealLauncher mealLauncher = GetComponent<MealLauncher>();
         bool isCollected = mealLauncher.IsCollected;
         if (other.transform.root.CompareTag("Player") && !isCollected)
@@ -31,9 +22,9 @@ public class CoinCollideHandler : MonoBehaviour
             AudioSourceManager.PlaySound(playerTag);
             gameObject.GetComponentInChildren<MeshRenderer>().enabled = false;
             mealLauncher.Collect(gameObject);
-            HandleTargetTelemetryFor(MetricsManager.DateTimeSampleType.HamburgerCollection);
+            GameEvents.FireMealCollected();
             mealLauncher.UpdateMealCounterUI();
-            if (MealLauncher.isLaunching) return;
+            if (MealTracker.Instance != null && MealTracker.Instance.IsLaunching) return;
             ObjectiveManager.SetObjectiveText("Deliver Meal into Target");
             ObjectiveManager.SetObjectiveColor(true);
         }
@@ -42,13 +33,11 @@ public class CoinCollideHandler : MonoBehaviour
         {
             DestroyCoin();
             HandleLevelCompletion();
-           // FindObjectOfType<MealIconsUI>()?.OnMealDelivered();
         }
 
         if (other.CompareTag("Target"))
         {
-            HandleTargetTelemetryFor(MetricsManager.DateTimeSampleType.HamburgerDelivery);
-            // FindObjectOfType<MealIconsUI>()?.OnMealDelivered();
+            GameEvents.FireMealDelivered();
             DestroyCoin();
             HandleLevelCompletion();
         }
@@ -56,12 +45,18 @@ public class CoinCollideHandler : MonoBehaviour
 
     private void HandleLevelCompletion()
     {
-        bool isThirdLevelCompleted = MealLauncher.numLaunchedMeals == MealLauncher.MaxMeals && 
-                                     Level.FuturisticWorld == LevelManager.currentLevel, 
-             isSecondLevelCompleted = MealLauncher.numLaunchedMeals == MealLauncher.MaxMeals && 
-                                      Level.MedievalVillage == LevelManager.currentLevel,
-             isFirstLevelCompleted = MealLauncher.numLaunchedMeals == MealLauncher.MaxMeals && 
+        var tracker = MealTracker.Instance;
+        if (tracker == null) return;
+
+        bool allMealsLaunched = tracker.NumLaunchedMeals == tracker.MaxMeals;
+
+        bool isThirdLevelCompleted = allMealsLaunched &&
+                                     Level.FuturisticWorld == LevelManager.currentLevel;
+        bool isSecondLevelCompleted = allMealsLaunched &&
+                                      Level.MedievalVillage == LevelManager.currentLevel;
+        bool isFirstLevelCompleted = allMealsLaunched &&
                                      Level.FantasyVillage == LevelManager.currentLevel;
+
         if (isFirstLevelCompleted || isSecondLevelCompleted || isThirdLevelCompleted)
             LevelManager.ProceedToNextLevel();
     }

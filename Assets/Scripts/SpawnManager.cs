@@ -1,9 +1,11 @@
 using UnityEngine;
 using System.Collections.Generic;
-using UnityEngine.SceneManagement;
 
-public class SpawnManager : MonoBehaviour
+// Singleton - non-persistent so each scene uses its own prefab references.
+public class SpawnManager : Singleton<SpawnManager>
 {
+    protected override bool Persistent => false;
+
     [Header("Pickup Prefabs")]
     [Tooltip("Assign your Shield prefab here or place in Resources folder as 'Shield'.")]
     public GameObject shieldPrefab;
@@ -11,40 +13,13 @@ public class SpawnManager : MonoBehaviour
     [Tooltip("Assign your Boost prefab here or place in Resources folder as 'Boost'.")]
     public GameObject boostPrefab;
 
-    private List<Vector3> shieldSpawnPoints = new List<Vector3>();
-    private List<Vector3> boostSpawnPoints = new List<Vector3>();
+    private List<Vector3> _shieldSpawnPoints = new List<Vector3>();
+    private List<Vector3> _boostSpawnPoints = new List<Vector3>();
 
-    private static SpawnManager instance;
-
-    void Awake()
+    protected override void Awake()
     {
-        // Singleton
-        if (instance != null && instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
-
-        instance = this;
-        DontDestroyOnLoad(gameObject);
-
-        // Listen for scene loads
-        SceneManager.sceneLoaded += OnSceneLoaded;
-
-        // Initial cache for the first scene
+        base.Awake();
         CachePickupPositions();
-    }
-
-    void OnDestroy()
-    {
-        SceneManager.sceneLoaded -= OnSceneLoaded;
-    }
-
-    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
-    {
-        // Each time a new scene loads, update pickup positions
-        CachePickupPositions();
-        ResetPickups();
     }
 
     private void CachePickupPositions()
@@ -52,16 +27,16 @@ public class SpawnManager : MonoBehaviour
         GameObject[] shields = GameObject.FindGameObjectsWithTag("Shield");
         GameObject[] boosts = GameObject.FindGameObjectsWithTag("Boost");
 
-        shieldSpawnPoints.Clear();
-        boostSpawnPoints.Clear();
+        _shieldSpawnPoints.Clear();
+        _boostSpawnPoints.Clear();
 
         foreach (var s in shields)
             if (s != null)
-                shieldSpawnPoints.Add(s.transform.position);
+                _shieldSpawnPoints.Add(s.transform.position);
 
         foreach (var b in boosts)
             if (b != null)
-                boostSpawnPoints.Add(b.transform.position);
+                _boostSpawnPoints.Add(b.transform.position);
     }
 
     public void ResetPickups()
@@ -74,11 +49,11 @@ public class SpawnManager : MonoBehaviour
             if (b != null)
                 Destroy(b);
 
-        foreach (var pos in shieldSpawnPoints)
+        foreach (var pos in _shieldSpawnPoints)
             if (shieldPrefab != null)
                 Instantiate(shieldPrefab, pos, Quaternion.identity);
 
-        foreach (var pos in boostSpawnPoints)
+        foreach (var pos in _boostSpawnPoints)
             if (boostPrefab != null)
                 Instantiate(boostPrefab, pos, Quaternion.identity);
     }

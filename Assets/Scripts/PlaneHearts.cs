@@ -16,7 +16,7 @@ public class PlaneHearts : MonoBehaviour
     [SerializeField] private Sprite heartSprite;       // Full heart sprite
     [SerializeField] private Sprite emptyHeartSprite;  // Optional faded heart sprite
 
-    private List<Image> heartImages = new List<Image>();
+    private List<Image> _heartImages = new List<Image>();
 
     [Header("Shield Settings")]
     [SerializeField] private float shieldDuration = 3f;  // How long shield lasts
@@ -25,7 +25,7 @@ public class PlaneHearts : MonoBehaviour
     [SerializeField] private RectTransform shieldContainer; // Parent for shield icons
     [SerializeField] private float iconOffset = 25f;     // Overlap offset between icons
 
-    private List<Image> activeShieldIcons = new List<Image>();
+    private List<Image> _activeShieldIcons = new List<Image>();
 
     private int _shieldCount = 0;
     private bool _isShieldActive;
@@ -53,13 +53,13 @@ public class PlaneHearts : MonoBehaviour
     {
         foreach (Transform child in heartsParent)
             Destroy(child.gameObject);
-        heartImages.Clear();
+        _heartImages.Clear();
 
         for (int i = 0; i < maxHearts; i++)
         {
             Image newHeart = Instantiate(heartPrefab, heartsParent);
             newHeart.sprite = heartSprite;
-            heartImages.Add(newHeart);
+            _heartImages.Add(newHeart);
         }
     }
 
@@ -86,19 +86,19 @@ public class PlaneHearts : MonoBehaviour
 
     private void UpdateHeartsUI()
     {
-        for (int i = 0; i < heartImages.Count; i++)
+        for (int i = 0; i < _heartImages.Count; i++)
         {
             if (i < currentHearts)
             {
-                heartImages[i].sprite = heartSprite;
-                heartImages[i].enabled = true;
+                _heartImages[i].sprite = heartSprite;
+                _heartImages[i].enabled = true;
             }
             else
             {
                 if (emptyHeartSprite != null)
-                    heartImages[i].sprite = emptyHeartSprite;
+                    _heartImages[i].sprite = emptyHeartSprite;
                 else
-                    heartImages[i].enabled = false;
+                    _heartImages[i].enabled = false;
             }
         }
     }
@@ -111,9 +111,9 @@ public class PlaneHearts : MonoBehaviour
 
         UpdateHeartsUI();
 
-        foreach (var icon in activeShieldIcons)
+        foreach (var icon in _activeShieldIcons)
             Destroy(icon.gameObject);
-        activeShieldIcons.Clear();
+        _activeShieldIcons.Clear();
 
         if (shieldVFX != null)
             shieldVFX.SetActive(false);
@@ -130,10 +130,10 @@ public class PlaneHearts : MonoBehaviour
             Image newIcon = Instantiate(shieldIconPrefab, shieldContainer);
             newIcon.gameObject.SetActive(true);
 
-            float offsetX = -iconOffset * activeShieldIcons.Count;
+            float offsetX = -iconOffset * _activeShieldIcons.Count;
             newIcon.rectTransform.anchoredPosition = new Vector2(offsetX, 0);
 
-            activeShieldIcons.Add(newIcon);
+            _activeShieldIcons.Add(newIcon);
         }
 
         _shieldCount++;
@@ -148,8 +148,8 @@ public class PlaneHearts : MonoBehaviour
         AudioSourceManager.PlaySound("UseShield");
 
         // Remove one shield icon visually
-        Image lastIcon = activeShieldIcons[activeShieldIcons.Count - 1];
-        activeShieldIcons.RemoveAt(activeShieldIcons.Count - 1);
+        Image lastIcon = _activeShieldIcons[_activeShieldIcons.Count - 1];
+        _activeShieldIcons.RemoveAt(_activeShieldIcons.Count - 1);
         Destroy(lastIcon.gameObject);
 
         StartCoroutine(ActivateShield(shieldDuration));

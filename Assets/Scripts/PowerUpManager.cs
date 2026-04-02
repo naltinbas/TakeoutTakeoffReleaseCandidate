@@ -12,7 +12,7 @@ public class PowerUpManager : MonoBehaviour
 
     [SerializeField] private List<PowerUpSpawn> powerUps = new List<PowerUpSpawn>();
 
-    private List<GameObject> activePowerUps = new();
+    private List<GameObject> _activePowerUps = new();
 
     void Start()
     {
@@ -24,20 +24,20 @@ public class PowerUpManager : MonoBehaviour
         foreach (var entry in powerUps)
         {
             GameObject newPowerUp = Instantiate(entry.prefab, entry.spawnPoint.position, entry.spawnPoint.rotation);
-            activePowerUps.Add(newPowerUp);
+            _activePowerUps.Add(newPowerUp);
         }
     }
 
     public void ResetPowerUps()
     {
         // Clear any old or destroyed ones
-        foreach (var powerUp in activePowerUps)
+        foreach (var powerUp in _activePowerUps)
         {
             if (powerUp != null)
                 Destroy(powerUp);
         }
 
-        activePowerUps.Clear();
+        _activePowerUps.Clear();
 
         // Respawn fresh
         SpawnAll();

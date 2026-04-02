@@ -3,23 +3,26 @@ using UnityEngine.UI;
 
 public class LoadingScreenManager : MonoBehaviour
 {
-    private Sprite _loadingScreenLevelOne;
-    private Sprite _loadingScreenLevelTwo;
-    private Sprite _loadingScreenLevelThree;
+    // Indexed by level number - replaces per-field switch statement
+    private Sprite[] _loadingScreenSprites;
 
     private GameObject _loadingCanvas;
     private Image _loadingImage;
 
     private void Awake()
     {
-        _loadingScreenLevelOne = Resources.Load<Sprite>("loadingScreenLevelOne");
-        _loadingScreenLevelTwo = Resources.Load<Sprite>("loadingScreenLevelTwo");
-        _loadingScreenLevelThree = Resources.Load<Sprite>("loadingScreenLevelThree");
+        _loadingScreenSprites = new Sprite[]
+        {
+            null, // index 0 - TitleMenu has no loading screen
+            Resources.Load<Sprite>("loadingScreenLevelOne"),
+            Resources.Load<Sprite>("loadingScreenLevelTwo"),
+            Resources.Load<Sprite>("loadingScreenLevelThree")
+        };
 
         _loadingCanvas = new GameObject("LoadingScreenCanvas");
         var canvas = _loadingCanvas.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 500; 
+        canvas.sortingOrder = 500;
 
         _loadingCanvas.AddComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         _loadingCanvas.AddComponent<GraphicRaycaster>();
@@ -43,17 +46,9 @@ public class LoadingScreenManager : MonoBehaviour
     {
         _loadingCanvas.SetActive(true);
 
-        switch (levelNumber)
+        if (levelNumber >= 0 && levelNumber < _loadingScreenSprites.Length && _loadingScreenSprites[levelNumber] != null)
         {
-            case 1:
-                _loadingImage.sprite = _loadingScreenLevelOne;
-                break;
-            case 2:
-                _loadingImage.sprite = _loadingScreenLevelTwo;
-                break;
-            case 3:
-                _loadingImage.sprite = _loadingScreenLevelThree;
-                break;
+            _loadingImage.sprite = _loadingScreenSprites[levelNumber];
         }
     }
 }

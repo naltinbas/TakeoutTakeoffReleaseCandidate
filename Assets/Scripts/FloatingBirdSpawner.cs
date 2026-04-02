@@ -21,32 +21,32 @@ public class FloatingBirdSpawner : MonoBehaviour
     [Header("Environment Settings")]
     public float maxHeight = 5f; // ceiling height relative to spawner
 
-    private GameObject[] cubes;
-    private float[] phaseOffsets;
+    private GameObject[] _cubes;
+    private float[] _phaseOffsets;
 
     void Start()
     {
-        cubes = new GameObject[cubeCount];
-        phaseOffsets = new float[cubeCount];
+        _cubes = new GameObject[cubeCount];
+        _phaseOffsets = new float[cubeCount];
 
         for (int i = 0; i < cubeCount; i++)
         {
-            // give each cube a unique phase so they don’t overlap
-            phaseOffsets[i] = Random.Range(0f, Mathf.PI * 2f);
+            // give each cube a unique phase so they dont overlap
+            _phaseOffsets[i] = Random.Range(0f, Mathf.PI * 2f);
 
-            cubes[i] = Instantiate(cubePrefab, transform.position, Quaternion.identity);
-            cubes[i].transform.localScale = cubeSize;
-            cubes[i].transform.SetParent(transform);
+            _cubes[i] = Instantiate(cubePrefab, transform.position, Quaternion.identity);
+            _cubes[i].transform.localScale = cubeSize;
+            _cubes[i].transform.SetParent(transform);
         }
     }
 
     void Update()
     {
-        for (int i = 0; i < cubes.Length; i++)
+        for (int i = 0; i < _cubes.Length; i++)
         {
-            if (cubes[i] == null) continue;
+            if (_cubes[i] == null) continue;
 
-            float t = Time.time * oscillationSpeed + phaseOffsets[i];
+            float t = Time.time * oscillationSpeed + _phaseOffsets[i];
 
             // oscillating horizontal radius
             float radius = Mathf.Sin(t) * baseRadius;
@@ -70,11 +70,11 @@ public class FloatingBirdSpawner : MonoBehaviour
 
             // --- Separation check ---
             Vector3 separation = Vector3.zero;
-            for (int j = 0; j < cubes.Length; j++)
+            for (int j = 0; j < _cubes.Length; j++)
             {
-                if (i == j || cubes[j] == null) continue;
+                if (i == j || _cubes[j] == null) continue;
 
-                Vector3 diff = cubes[i].transform.position - cubes[j].transform.position;
+                Vector3 diff = _cubes[i].transform.position - _cubes[j].transform.position;
                 float dist = diff.magnitude;
 
                 if (dist < minDistance && dist > 0f)
@@ -93,8 +93,8 @@ public class FloatingBirdSpawner : MonoBehaviour
             if (desiredPos.y > maxY) desiredPos.y = maxY;
 
             // Smooth movement
-            cubes[i].transform.position = Vector3.Lerp(
-                cubes[i].transform.position,
+            _cubes[i].transform.position = Vector3.Lerp(
+                _cubes[i].transform.position,
                 desiredPos,
                 Time.deltaTime * 5f
             );

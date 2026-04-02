@@ -2,14 +2,13 @@ using UnityEngine;
 
 public class ExplosionHandler : MonoBehaviour
 {
-
     [SerializeField] private PlaneHearts planeHearts;
 
     public void Explode()
     {
         ResetLevelState();
         AudioSourceManager.PlaySound("crash");
-        HandleTelemetry();
+        GameEvents.FireExplosion();
     }
 
     public void ResetLevelState()
@@ -19,17 +18,7 @@ public class ExplosionHandler : MonoBehaviour
         {
             mealLauncher.ResetState();
         }
-        /// Reset hearts to full
-        planeHearts?.ResetHearts();
-    }
 
-    private void HandleTelemetry()
-    {
-        if(!MetricsManager.IsTelemetryEnabled) return;
-        var metricsManager = FindObjectOfType<MetricsManager>();
-        if(!metricsManager) return;
-        metricsManager.Record(MetricsManager.AccumulationType.Explosion);
-        metricsManager.ClearTimeRecords(MetricsManager.DateTimeSampleType.HamburgerDelivery);
-        metricsManager.ClearTimeRecords(MetricsManager.DateTimeSampleType.HamburgerCollection);
+        planeHearts?.ResetHearts();
     }
 }

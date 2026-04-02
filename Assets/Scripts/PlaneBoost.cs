@@ -17,14 +17,14 @@ public class PlaneBoost : MonoBehaviour
     [SerializeField] private RectTransform boostContainer; // Empty UI parent for icons
     [SerializeField] private float iconOffset = 30f; // How much each icon shifts (reduce for overlap)
 
-    private AirplaneController controller;
-    private bool isBoosting = false;
-    private float originalSpeed;
-    private List<Image> activeBoostIcons = new List<Image>();
+    private AirplaneController _controller;
+    private bool _isBoosting = false;
+    private float _originalSpeed;
+    private List<Image> _activeBoostIcons = new List<Image>();
 
     void Awake()
     {
-        controller = GetComponent<AirplaneController>();
+        _controller = GetComponent<AirplaneController>();
 
         // Hide any default icons if assigned directly
         if (boostIconPrefab != null)
@@ -34,7 +34,7 @@ public class PlaneBoost : MonoBehaviour
     void Update()
     {
         // Trigger boost if available and not already active
-        if (activeBoostIcons.Count > 0 && !isBoosting && Input.GetKeyDown(KeyCode.K))
+        if (_activeBoostIcons.Count > 0 && !_isBoosting && Input.GetKeyDown(KeyCode.K))
         {
             StartCoroutine(DoBoost());
         }
@@ -51,10 +51,10 @@ public class PlaneBoost : MonoBehaviour
             newIcon.gameObject.SetActive(true);
 
             // Slightly shift icons left for overlap
-            float offsetX = -iconOffset * (activeBoostIcons.Count);
+            float offsetX = -iconOffset * (_activeBoostIcons.Count);
             newIcon.rectTransform.anchoredPosition = new Vector2(offsetX, 0);
 
-            activeBoostIcons.Add(newIcon);
+            _activeBoostIcons.Add(newIcon);
         }
 
         // Add fuel
@@ -63,43 +63,43 @@ public class PlaneBoost : MonoBehaviour
             fuelSystem.AddFuel(fuelIncreaseAmount);
         }
 
-        Debug.Log($"Boost collected! Total boosts: {activeBoostIcons.Count}");
+        Debug.Log($"Boost collected! Total boosts: {_activeBoostIcons.Count}");
     }
 
     private IEnumerator DoBoost()
     {
-        if (activeBoostIcons.Count <= 0) yield break;
+        if (_activeBoostIcons.Count <= 0) yield break;
 
-        isBoosting = true;
+        _isBoosting = true;
         AudioSourceManager.PlaySound("UseBoost");
 
         // Remove last icon visually
-        Image lastIcon = activeBoostIcons[activeBoostIcons.Count - 1];
-        activeBoostIcons.RemoveAt(activeBoostIcons.Count - 1);
+        Image lastIcon = _activeBoostIcons[_activeBoostIcons.Count - 1];
+        _activeBoostIcons.RemoveAt(_activeBoostIcons.Count - 1);
         Destroy(lastIcon.gameObject);
 
         // Apply boost effect
-        originalSpeed = controller.baseAirplaneSpeed;
-        controller.baseAirplaneSpeed *= boostMultiplier;
+        _originalSpeed = _controller.baseAirplaneSpeed;
+        _controller.baseAirplaneSpeed *= boostMultiplier;
         Debug.Log("Boost Activated!");
 
         yield return new WaitForSeconds(boostDuration);
 
-        controller.baseAirplaneSpeed = originalSpeed;
-        isBoosting = false;
+        _controller.baseAirplaneSpeed = _originalSpeed;
+        _isBoosting = false;
         Debug.Log("Boost Ended!");
     }
 
     public void ResetBoosts()
     {
         // Clear all boost icons
-        foreach (var icon in activeBoostIcons)
+        foreach (var icon in _activeBoostIcons)
         {
             if (icon != null)
                 Destroy(icon.gameObject);
         }
 
-        activeBoostIcons.Clear();
-        isBoosting = false;
+        _activeBoostIcons.Clear();
+        _isBoosting = false;
     }
 }

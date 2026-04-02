@@ -23,14 +23,14 @@ public class HealthBar : MonoBehaviour
     [SerializeField] private float bumpScale = 1.15f;
     [SerializeField] private float bumpDuration = 0.15f;
 
-    private RectTransform rectTransform;
-    private Vector3 originalScale;
-    private Coroutine bumpRoutine;
+    private RectTransform _rectTransform;
+    private Vector3 _originalScale;
+    private Coroutine _bumpRoutine;
 
     private void Awake()
     {
-        rectTransform = GetComponent<RectTransform>();
-        originalScale = rectTransform.localScale;
+        _rectTransform = GetComponent<RectTransform>();
+        _originalScale = _rectTransform.localScale;
     }
 
     private void Update()
@@ -65,9 +65,9 @@ public class HealthBar : MonoBehaviour
             currentHealth = newHealth;
 
             // Start bump animation
-            if (bumpRoutine != null)
-                StopCoroutine(bumpRoutine);
-            bumpRoutine = StartCoroutine(BumpEffect());
+            if (_bumpRoutine != null)
+                StopCoroutine(_bumpRoutine);
+            _bumpRoutine = StartCoroutine(BumpEffect());
         }
     }
 
@@ -79,9 +79,9 @@ public class HealthBar : MonoBehaviour
             elapsed += Time.deltaTime;
             float t = elapsed / bumpDuration;
             float scale = Mathf.Lerp(1f, bumpScale, Mathf.Sin(t * Mathf.PI)); // bump in & out
-            rectTransform.localScale = originalScale * scale;
+            _rectTransform.localScale = _originalScale * scale;
             yield return null;
         }
-        rectTransform.localScale = originalScale;
+        _rectTransform.localScale = _originalScale;
     }
 }
